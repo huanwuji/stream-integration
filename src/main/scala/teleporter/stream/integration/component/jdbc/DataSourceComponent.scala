@@ -3,9 +3,10 @@ package teleporter.stream.integration.component.jdbc
 import java.util.Properties
 import javax.sql.DataSource
 
+import akka.actor.Actor
 import akka.http.scaladsl.model.Uri
-import akka.stream.actor.ActorPublisher
 import akka.stream.actor.ActorPublisherMessage.Request
+import akka.stream.actor.{ActorPublisher, ActorSubscriber, RequestStrategy}
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
 import teleporter.stream.integration.protocol.{Address, AddressParser}
 
@@ -16,7 +17,7 @@ import scala.collection.JavaConversions._
  * created: 2015/8/2.
  */
 /**
- * @param uri hikari:///jdbcUrl=mysql:jdbc://....
+ * @param uri address:hikari:///jdbcUrl=mysql:jdbc://....
  */
 case class DataSourceAddressParser(uri: Uri) extends AddressParser[DataSource](uri) {
   override protected def build: DataSource = {
@@ -26,13 +27,16 @@ case class DataSourceAddressParser(uri: Uri) extends AddressParser[DataSource](u
         props.putAll(uri.query.toMap)
         val config = new HikariConfig(props)
         val query = uri.query
-        val poolName = query.getOrElse("poolName", query.get("id").get)
+        props.put("poolName", query.getOrElse("poolName", query.get("id").get))
         new HikariDataSource(config)
-      case _ ⇒ throw new IllegalArgumentException(s"not supprot database pool, $uri")
+      case _ ⇒ throw new IllegalArgumentException(s"not support database pool, $uri")
     }
   }
 }
 
+/**
+ * source:addressType://addressId?type=query&sql=select * from test where start>${start} and<${end} limit ${page * pageSize}, pageSize
+ */
 case class JdbcContext(sql: String, uri: Uri, address: Address[DataSource])
 
 class DataSourcePublisher(context: JdbcContext) extends ActorPublisher[Map[String, Any]] {
@@ -48,6 +52,12 @@ class DataSourcePublisher(context: JdbcContext) extends ActorPublisher[Map[Strin
         }
       }
   }
+}
+
+class DataSourceSubscriber(reqStrategy: RequestStrategy) extends ActorSubscriber {
+  override protected def requestStrategy: RequestStrategy = reqStrategy
+
+  override def receive: Actor.Receive = ???
 }
 
 class DataSourceComponent {
