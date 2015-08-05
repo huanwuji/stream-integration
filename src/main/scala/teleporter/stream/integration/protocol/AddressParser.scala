@@ -15,7 +15,5 @@ abstract class AddressParser[A](uri: Uri) {
     Address(id.get, build)
   }
 
-  protected def build: A
+  def build: A
 }
-
-

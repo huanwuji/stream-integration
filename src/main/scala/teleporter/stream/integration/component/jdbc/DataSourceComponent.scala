@@ -8,6 +8,7 @@ import akka.http.scaladsl.model.Uri
 import akka.stream.actor.ActorPublisherMessage.Request
 import akka.stream.actor.{ActorPublisher, ActorSubscriber, RequestStrategy}
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
+import teleporter.stream.integration.component.{AddressBus, PageRoller}
 import teleporter.stream.integration.protocol.{Address, AddressParser}
 
 import scala.collection.JavaConversions._
@@ -17,17 +18,18 @@ import scala.collection.JavaConversions._
  * created: 2015/8/2.
  */
 /**
- * @param uri address:hikari:///jdbcUrl=mysql:jdbc://....
+ * @param uri address-hikari:///jdbcUrl=mysql:jdbc://....
  */
 case class DataSourceAddressParser(uri: Uri) extends AddressParser[DataSource](uri) {
-  override protected def build: DataSource = {
+  override def build: DataSource = {
     uri.scheme match {
-      case hikari ⇒
+      case "hikari" ⇒
         val props = new Properties()
         props.putAll(uri.query.toMap)
         val config = new HikariConfig(props)
         val query = uri.query
-        props.put("poolName", query.getOrElse("poolName", query.get("id").get))
+        val id = query.get("id").get
+        props.put("poolName", query.getOrElse("poolName", id))
         new HikariDataSource(config)
       case _ ⇒ throw new IllegalArgumentException(s"not support database pool, $uri")
     }
@@ -35,12 +37,22 @@ case class DataSourceAddressParser(uri: Uri) extends AddressParser[DataSource](u
 }
 
 /**
- * source:addressType://addressId?type=query&sql=select * from test where start>${start} and<${end} limit ${page * pageSize}, pageSize
+ * source-dataSource://addressId?type=query&start=2015-01-01T00:00:00Z&period=3600&deadline=2015-01-02T00:00:00Z&timeRolling=true&page=1&pageSize=10&pageRolling=true&maxPage=20&sql=select * from test where start>${start} and<${end} limit ${page * pageSize}, pageSize
  */
 case class JdbcContext(sql: String, uri: Uri, address: Address[DataSource])
 
-class DataSourcePublisher(context: JdbcContext) extends ActorPublisher[Map[String, Any]] {
-  val query = new JdbcQuery(context.address.client.getConnection, context.sql)
+class DataSourcePublisher(uri: Uri)(implicit addressBus: AddressBus) extends ActorPublisher[Map[String, Any]] {
+  var data: Iterator[Map[String, Any]] = Iterator.empty
+
+  @throws[Exception](classOf[Exception])
+  override def preStart(): Unit = {
+    val dataSource = addressBus.addressing[DataSource](uri.authority.host.toString())
+    val query = uri.query
+    query.get("pageRolling") match {
+      case Some("true") ⇒ PageRoller(query.get("page").get.toInt, query.get("pageSize").get.toInt, query.get("maxPage").map(_.toInt).getOrElse(Int.MaxValue))
+      case _ ⇒
+    }
+  }
 
   override def receive: Receive = {
     case Request(n) ⇒

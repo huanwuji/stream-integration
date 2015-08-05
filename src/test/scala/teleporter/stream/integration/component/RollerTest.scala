@@ -31,4 +31,9 @@ class RollerTest extends FunSuite {
         }
     }.foreach(println)
   }
+  test("string context") {
+    val id = "aa"
+    val r = StringContext("Hello, ", "2", "333").s(id, id + 1)
+    println(r)
+  }
 }
