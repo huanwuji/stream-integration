@@ -1,6 +1,9 @@
 package teleporter.stream.integration.component.jdbc
 
-import java.sql.Connection
+import javax.sql.DataSource
+
+import akka.http.scaladsl.model.Uri
+import teleporter.stream.integration.component.{AddressBus, UriIterator}
 
 /**
  * author: huanwuji
@@ -10,24 +13,27 @@ object JdbcOperator {
 
 }
 
-class JdbcQuery(conn: Connection, sql: String) extends Iterator[Map[String, Any]] with AutoCloseable {
-  val ps = conn.prepareStatement(sql)
+class JdbcQuery(uri: Uri)(implicit addressBus: AddressBus) extends UriIterator[Map[String, Any]](uri) with AutoCloseable {
+  val query = uri.query
+  val address = addressBus.addressing[DataSource](uri.authority.host.toString())
+  val conn = address.getConnection
+  val ps = conn.prepareStatement(query.get("sql").get)
   val rs = ps.executeQuery()
   val metaData = rs.getMetaData
   val colNames: IndexedSeq[String] = (1 to metaData.getColumnCount).map(metaData.getColumnName)
-  var currNext = true
+  var canFetch = true
 
   override def hasNext: Boolean =
-    currNext || {
-      currNext = rs.next()
-      currNext
+    canFetch || {
+      canFetch = rs.next()
+      canFetch
     } || {
       close()
       false
     }
 
   override def next(): Map[String, Any] = {
-    currNext = false
+    canFetch = false
     colNames.map(name ⇒ (name, rs.getObject(name))).toMap
   }
 

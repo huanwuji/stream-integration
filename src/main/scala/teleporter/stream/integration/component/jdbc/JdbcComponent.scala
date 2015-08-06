@@ -28,7 +28,7 @@ case class JdbcAddress(uri: Uri) extends AddressParser[JDBCClient](uri) {
     Address(uri.query.getOrElse("id", uri.authority.toString()), JDBCClient(uri))
   }
 
-  override protected def build: JDBCClient = {
+  override def build: JDBCClient = {
     uri.scheme match {
       case "jdbc:mysql" ⇒ Class.forName("com.mysql.jdbc.Driver")
       case _ ⇒ require(requirement = true, s"not found jdbc driver for schema:$uri")

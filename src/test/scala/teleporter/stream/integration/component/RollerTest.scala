@@ -2,6 +2,7 @@ package teleporter.stream.integration.component
 
 import java.time.LocalDateTime
 
+import akka.http.scaladsl.model.Uri
 import org.scalatest.FunSuite
 
 import scala.concurrent.duration._
@@ -14,7 +15,7 @@ class RollerTest extends FunSuite {
   test("roller") {
     val now = LocalDateTime.now()
     var i = 0
-    TimeDeadlineRoller(now.minusHours(1L), now, 30.minutes)
+    TimeRoller(now.minusHours(1L), () ⇒ now, 30.minutes)
       .flatMap {
       case rollTime ⇒
         println(s"$rollTime")
@@ -35,5 +36,11 @@ class RollerTest extends FunSuite {
     val id = "aa"
     val r = StringContext("Hello, ", "2", "333").s(id, id + 1)
     println(r)
+  }
+  test("query builder") {
+    val uri = Uri("http://www.baidu.com?name=aaa&age=1&sex=true")
+    val query = uri.query.toMap ++ Seq(("name", "bb"), ("age", "2"))
+    println(uri.withQuery(query))
+    println(uri.query.toMap -- Seq("name", "age"))
   }
 }
