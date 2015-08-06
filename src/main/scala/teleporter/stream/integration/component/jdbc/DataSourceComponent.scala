@@ -8,8 +8,11 @@ import akka.http.scaladsl.model.Uri
 import akka.stream.actor.ActorPublisherMessage.Request
 import akka.stream.actor.{ActorPublisher, ActorSubscriber, RequestStrategy}
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
-import teleporter.stream.integration.component.{AddressBus, PageRoller}
+import org.apache.commons.dbutils.QueryRunner
+import org.apache.commons.dbutils.handlers.MapListHandler
+import teleporter.stream.integration.component.AddressBus
 import teleporter.stream.integration.protocol.{Address, AddressParser}
+import teleporter.stream.integration.script.ScriptExec
 
 import scala.collection.JavaConversions._
 
@@ -41,27 +44,24 @@ case class DataSourceAddressParser(uri: Uri) extends AddressParser[DataSource](u
  */
 case class JdbcContext(sql: String, uri: Uri, address: Address[DataSource])
 
-class DataSourcePublisher(uri: Uri)(implicit addressBus: AddressBus) extends ActorPublisher[Map[String, Any]] {
+class DataSourcePublisher(uri: Uri)(implicit addressBus: AddressBus,scriptExec: ScriptExec) extends ActorPublisher[Map[String, Any]] {
   var data: Iterator[Map[String, Any]] = Iterator.empty
 
   @throws[Exception](classOf[Exception])
   override def preStart(): Unit = {
     val dataSource = addressBus.addressing[DataSource](uri.authority.host.toString())
-    val query = uri.query
-    query.get("pageRolling") match {
-      case Some("true") ⇒ PageRoller(query.get("page").get.toInt, query.get("pageSize").get.toInt, query.get("maxPage").map(_.toInt).getOrElse(Int.MaxValue))
-      case _ ⇒
-    }
+    val queryRunner = new QueryRunner(dataSource)
+    val result = queryRunner.query(scriptExec.uriEval(uri, uri.query.get("sql").get), new MapListHandler())
   }
 
   override def receive: Receive = {
     case Request(n) ⇒
       for (i ← 1L to n) {
-        if (query.hasNext) {
-          onNext(query.next())
-        } else {
-          onCompleteThenStop()
-        }
+//        if (query.hasNext) {
+//          onNext(query.next())
+//        } else {
+//          onCompleteThenStop()
+//        }
       }
   }
 }

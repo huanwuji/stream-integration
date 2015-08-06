@@ -4,7 +4,6 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 import akka.http.scaladsl.model.Uri
-import teleporter.stream.integration.utils.Uris
 
 import scala.collection.Iterator._
 import scala.collection.{AbstractIterator, GenTraversableOnce, Iterator}
@@ -85,8 +84,8 @@ object TimeRoller {
       case Some(offsetDeadline) if offsetDeadline.endsWith(".fromNow") ⇒
         val duration = Duration(offsetDeadline.substring(1, offsetDeadline.lastIndexOf(".")))
         () ⇒ LocalDateTime.now().minusSeconds(duration.toSeconds)
-      case Some(dateTime) ⇒
-        val dateTime = LocalDateTime.parse(dateTime, DateTimeFormatter.ISO_INSTANT)
+      case Some(dateTimeStr) ⇒
+        val dateTime = LocalDateTime.parse(dateTimeStr, DateTimeFormatter.ISO_INSTANT)
         () ⇒ dateTime
       case _ ⇒ throw new IllegalArgumentException(s"deadline is required, $uri")
     }
@@ -112,58 +111,14 @@ object Roller {
         val rollUris = for {
           rollTime ← TimeRoller(uri)
           rollPage ← PageRoller(uri)
-          rollUri ← TimeRoller.timeUri(uri, rollTime)
-          rollUri ← PageRoller.pageUri(rollUri, rollPage)
-        } yield rollUri
+        } yield {
+            val rollUri = TimeRoller.timeUri(uri, rollTime)
+            PageRoller.pageUri(rollUri, rollPage)
+          }
         rollUris.flatMap(uriIterator)
       case (Some("true"), _) ⇒ TimeRoller(uri).flatMap(rollTime ⇒ uriIterator(TimeRoller.timeUri(uri, rollTime)))
       case (_, Some("true")) ⇒ PageRoller(uri).flatMap(rollPage ⇒ uriIterator(PageRoller.pageUri(uri, rollPage)))
       case _ ⇒ uriIterator(uri)
     }
-    query.get("pageRolling") match {
-      case Some("true") ⇒
-
-    }
-    val pageRoller = query.get("pageRolling") match {
-      case Some("true") ⇒
-        PageRoller(
-          page = query.get("page").get.toInt,
-          pageSize = query.get("pageSize").get.toInt,
-          maxPage = query.get("maxPage").map(_.toInt).getOrElse(Int.MaxValue)
-        ).flatMap {
-          rollPage ⇒
-            uriIterator(Uris.updateQuery(uri, Seq(("page", rollPage.currPage.toString), ("pageSize", rollPage.pageSize.toString))))
-        }
-      case _ ⇒ uriIterator(uri)
-    }
-    val timeRoller = query.get("timeRolling") match {
-      case Some("true") ⇒
-        val deadline: () ⇒ LocalDateTime = query.get("deadline") match {
-          case Some("now") ⇒
-            val now = LocalDateTime.now(); () ⇒ now
-          case Some("fromNow") ⇒ () ⇒ LocalDateTime.now()
-          case Some(offsetDeadline) if offsetDeadline.endsWith(".fromNow") ⇒
-            val duration = Duration(offsetDeadline.substring(1, offsetDeadline.lastIndexOf(".")))
-            () ⇒ LocalDateTime.now().minusSeconds(duration.toSeconds)
-          case Some(dateTime) ⇒
-            val dateTime = LocalDateTime.parse(dateTime, DateTimeFormatter.ISO_INSTANT)
-            () ⇒ dateTime
-          case _ ⇒ throw new IllegalArgumentException(s"deadline is required, $uri")
-        }
-        TimeRoller(
-          start = LocalDateTime.parse(query.get("start").get, DateTimeFormatter.ISO_INSTANT),
-          deadline = deadline,
-          period = Duration(query.get("period").get)
-        ).flatMap {
-          rollTime ⇒
-            Uris.updateQuery(uri, Seq(
-              ("start", DateTimeFormatter.ISO_INSTANT.format(rollTime.start)),
-              ("end", DateTimeFormatter.ISO_INSTANT.format(rollTime.end))))
-            pageRoller
-        }
-      case _ ⇒ Iterator.empty
-    }
-    val roller = timeRoller.flatMap(rollTime ⇒ pageRoller.flatMap(rollpage ⇒ Iterator.empty))
-    roller
   }
 }
