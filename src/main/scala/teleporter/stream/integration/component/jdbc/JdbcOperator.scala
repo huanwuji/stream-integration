@@ -1,43 +1,54 @@
 package teleporter.stream.integration.component.jdbc
 
-import javax.sql.DataSource
-
-import akka.http.scaladsl.model.Uri
-import teleporter.stream.integration.component.{AddressBus, UriIterator}
+import java.sql.{ResultSet, ResultSetMetaData, SQLException}
 
 /**
  * author: huanwuji
  * created: 2015/8/2.
  */
 object JdbcOperator {
-
+  def convertToMap(rs: ResultSet): Map[String, Any] = {
+    val builder = Map.newBuilder[String, Any]
+    val rsmd: ResultSetMetaData = rs.getMetaData
+    val cols: Int = rsmd.getColumnCount
+    for (i ← 1 to cols) {
+      var columnName: String = rsmd.getColumnLabel(i)
+      if (null == columnName || 0 == columnName.length) {
+        columnName = rsmd.getColumnName(i)
+      }
+      builder += ((columnName, rs.getObject(i)))
+    }
+    builder.result()
+  }
 }
 
-class JdbcQuery(uri: Uri)(implicit addressBus: AddressBus) extends UriIterator[Map[String, Any]](uri) with AutoCloseable {
-  val query = uri.query
-  val address = addressBus.addressing[DataSource](uri.authority.host.toString())
-  val conn = address.getConnection
-  val ps = conn.prepareStatement(query.get("sql").get)
-  val rs = ps.executeQuery()
-  val metaData = rs.getMetaData
-  val colNames: IndexedSeq[String] = (1 to metaData.getColumnCount).map(metaData.getColumnName)
-  var canFetch = true
 
-  override def hasNext: Boolean =
-    canFetch || {
-      canFetch = rs.next()
-      canFetch
-    } || {
-      close()
-      false
+class ResultSetIterator(rs: ResultSet) extends Iterator[Map[String, Any]] {
+
+  import JdbcOperator._
+
+  def hasNext: Boolean = {
+    try {
+      !rs.isLast
+    } catch {
+      case e: SQLException ⇒
+        rethrow(e)
+        false
     }
-
-  override def next(): Map[String, Any] = {
-    canFetch = false
-    colNames.map(name ⇒ (name, rs.getObject(name))).toMap
   }
 
-  override def close(): Unit = {
-    conn.close()
+  def next(): Map[String, Any] = {
+    try {
+      rs.next
+      convertToMap(rs)
+    } catch {
+      case e: SQLException ⇒
+        rethrow(e)
+        null
+    }
+  }
+
+  protected def rethrow(e: SQLException) {
+    throw new RuntimeException(e.getMessage)
   }
 }
