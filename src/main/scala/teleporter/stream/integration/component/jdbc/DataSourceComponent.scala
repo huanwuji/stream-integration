@@ -1,18 +1,16 @@
 package teleporter.stream.integration.component.jdbc
 
-import java.sql.{Connection, PreparedStatement, ResultSet}
 import java.util.Properties
 import javax.sql.DataSource
 
-import akka.actor.Actor
 import akka.http.scaladsl.model.Uri
+import akka.stream.actor.ActorPublisher
 import akka.stream.actor.ActorPublisherMessage.Request
-import akka.stream.actor.{ActorPublisher, ActorSubscriber, RequestStrategy}
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
-import org.apache.commons.dbutils.DbUtils
-import teleporter.stream.integration.component.AddressBus
+import teleporter.stream.integration.component.{AddressBus, Roller}
 import teleporter.stream.integration.protocol.{Address, AddressParser}
 import teleporter.stream.integration.script.ScriptExec
+import teleporter.stream.integration.transaction.Trace
 
 import scala.collection.JavaConversions._
 
@@ -44,43 +42,26 @@ case class DataSourceAddressParser(uri: Uri) extends AddressParser[DataSource](u
  */
 case class JdbcContext(sql: String, uri: Uri, address: Address[DataSource])
 
-class DataSourcePublisher(uri: Uri)(implicit addressBus: AddressBus, scriptExec: ScriptExec) extends ActorPublisher[Map[String, Any]] {
-  var conn: Connection = null
-  var ps: PreparedStatement = null
-  var rs: ResultSet = null
-  val result: Iterator[Map[String, Any]] = Iterator.empty
+class DataSourcePublisher(uri: Uri, trace: Trace[Map[String, Any]])(implicit addressBus: AddressBus, scriptExec: ScriptExec) extends ActorPublisher[Trace[Map[String, Any]]] {
+  var result: Iterator[Map[String, Any]] = Iterator.empty
 
   @throws[Exception](classOf[Exception])
   override def preStart(): Unit = {
-    val dataSource = addressBus.addressing[DataSource](uri.authority.host.toString())
-    conn = dataSource.getConnection
-    ps = conn.prepareStatement(scriptExec.uriEval(uri, uri.query.get("sql").get))
-    rs = ps.executeQuery()
-    val resultSetIterator = new ResultSetIterator(rs)
+    result = Roller(uri)(uri ⇒ QueryIterator(trace.copy(point = uri)))
   }
 
   override def receive: Receive = {
     case Request(n) ⇒
       for (i ← 1L to n) {
         if (result.hasNext) {
-          onNext(result.next())
+          onNext(trace.copy(data = Some(result.next())))
         } else {
-          DbUtils.closeQuietly(conn, ps, rs)
-          onCompleteThenStop()
+          if (!isCompleted) {
+            onCompleteThenStop()
+          }
         }
       }
   }
-
-  override def onError(cause: Throwable): Unit = {
-    DbUtils.closeQuietly(conn, ps, rs)
-    super.onError(cause)
-  }
-}
-
-class DataSourceSubscriber(reqStrategy: RequestStrategy) extends ActorSubscriber {
-  override protected def requestStrategy: RequestStrategy = reqStrategy
-
-  override def receive: Actor.Receive = ???
 }
 
 class DataSourceComponent {

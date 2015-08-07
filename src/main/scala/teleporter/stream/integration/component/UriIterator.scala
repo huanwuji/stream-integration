@@ -20,4 +20,4 @@ object Uris {
   }
 }
 
-abstract class UriIterator[A](uri: Uri) extends Iterator[A]
+abstract class UriIterator[A](uri: Uri) extends Iterator[A] with AutoCloseable

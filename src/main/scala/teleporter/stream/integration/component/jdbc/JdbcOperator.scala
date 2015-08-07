@@ -1,6 +1,12 @@
 package teleporter.stream.integration.component.jdbc
 
-import java.sql.{ResultSet, ResultSetMetaData, SQLException}
+import java.sql.{ResultSet, ResultSetMetaData}
+import javax.sql.DataSource
+
+import org.apache.commons.dbutils.DbUtils
+import teleporter.stream.integration.component.{AddressBus, UriIterator}
+import teleporter.stream.integration.script.ScriptExec
+import teleporter.stream.integration.transaction.Trace
 
 /**
  * author: huanwuji
@@ -23,7 +29,12 @@ object JdbcOperator {
 }
 
 
-class ResultSetIterator(rs: ResultSet) extends Iterator[Map[String, Any]] {
+case class QueryIterator(trace: Trace[Map[String, Any]])(implicit addressBus: AddressBus, scriptExec: ScriptExec) extends UriIterator[Map[String, Any]](trace.point) {
+  val uri = trace.point
+  val dataSource = addressBus.addressing[DataSource](uri.authority.host.toString())
+  val conn = dataSource.getConnection
+  val ps = conn.prepareStatement(scriptExec.uriEval(uri, uri.query.get("sql").get))
+  val rs = ps.executeQuery()
 
   import JdbcOperator._
 
@@ -31,7 +42,7 @@ class ResultSetIterator(rs: ResultSet) extends Iterator[Map[String, Any]] {
     try {
       !rs.isLast
     } catch {
-      case e: SQLException ⇒
+      case e: Exception ⇒
         rethrow(e)
         false
     }
@@ -40,15 +51,24 @@ class ResultSetIterator(rs: ResultSet) extends Iterator[Map[String, Any]] {
   def next(): Map[String, Any] = {
     try {
       rs.next
-      convertToMap(rs)
+      val data = convertToMap(rs)
+      if (!hasNext) {
+        close()
+      }
+      data
     } catch {
-      case e: SQLException ⇒
+      case e: Exception ⇒
         rethrow(e)
         null
     }
   }
 
-  protected def rethrow(e: SQLException) {
+  protected def rethrow(e: Exception) {
+    close()
     throw new RuntimeException(e.getMessage)
+  }
+
+  override def close(): Unit = {
+    DbUtils.closeQuietly(conn, ps, rs)
   }
 }

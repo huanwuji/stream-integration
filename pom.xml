@@ -14,7 +14,7 @@
         <log4j2.version>2.2</log4j2.version>
         <akka.version>2.3.12</akka.version>
         <akka.http.version>1.0</akka.http.version>
-        <jackson.version>2.5.3</jackson.version>
+        <jackson.version>2.6.0-1</jackson.version>
     </properties>
     <dependencies>
         <dependency>
@@ -89,11 +89,6 @@
         <dependency>
             <groupId>com.fasterxml.jackson.module</groupId>
             <artifactId>jackson-module-scala_2.11</artifactId>
-            <version>${jackson.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
             <version>${jackson.version}</version>
         </dependency>
         <dependency>
