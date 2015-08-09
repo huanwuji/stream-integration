@@ -1,41 +1,32 @@
 package teleporter.stream.integration.transaction
 
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoField
-
-import teleporter.stream.integration.transaction.TraceState._
+import akka.http.scaladsl.model.Uri
+import com.fasterxml.jackson.annotation.JsonIgnore
+import teleporter.stream.integration.transaction.TransactionState._
 
 /**
- * date 2015/8/3.
- * @author daikui
+ * author: huanwuji
+ * created: 2015/8/9.
  */
-trait Transaction[A] {
-  def begin(trace: Trace[A])
+object TransactionState {
 
-  def commit(trace: Trace[A])
+  trait State
 
-  def rollback(taskId: String): Trace[A]
+  case object Start extends State
 
-  def recover(taskId: String): Iterator[Trace[A]]
+  case object Normal extends State
+
+  case object End extends State
+
+  case object Error extends State
+
 }
 
-trait StreamTransaction[A] extends Transaction[A]
+trait Transaction {
+  def id: String
 
-case class LevelDBStreamTransactionImpl[A](storage: TransactionStateStorage[Trace[A]]) extends StreamTransaction[A] {
-
-  override def begin(trace: Trace[A]): Unit = storage.put(key(trace), trace)
-
-  override def recover(taskId: String): Iterator[Trace[A]] = storage.iterator().filter(trace ⇒ trace.state == Error || trace.state == Extra)
-
-  override def rollback(taskId: String): Trace[A] = storage.iterator()
-    .filter(trace ⇒ trace.state == Start || trace.state == Normal || trace.state == End)
-    .minBy {
-    trace ⇒
-      val query = trace.point.query
-      query.get("start").map(DateTimeFormatter.ISO_INSTANT.parse(_).getLong(ChronoField.INSTANT_SECONDS)).getOrElse(0L) + query.get("page").map(_.toLong).getOrElse(0L)
-  }
-
-  override def commit(trace: Trace[A]): Unit = storage.delete(key(trace))
-
-  private def key(trace: Trace[A]): String = s"${trace.taskId}:${trace.hashCode()}"
+  def state: State
 }
+
+case class Trace[A](id: String, point: Uri, @JsonIgnore data: Option[A] = None, state: State = Normal)
+  extends Transaction

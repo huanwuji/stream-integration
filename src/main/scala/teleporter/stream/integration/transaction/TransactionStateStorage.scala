@@ -10,6 +10,8 @@ import scala.collection.JavaConversions._
  * @author daikui
  */
 trait TransactionStateStorage[A] {
+  def get(id: String): A
+
   def put(id: String, o: A)
 
   def delete(id: String)
@@ -20,6 +22,8 @@ trait TransactionStateStorage[A] {
 class LevelDBTransactionStateStorage[A](db: DB)(implicit m: Manifest[A]) extends TransactionStateStorage[A] {
 
   import teleporter.stream.integration.serialize.Jackson._
+
+  override def get(id: String): A = JSON.readValue[A](db.get(bytes(id)))
 
   override def put(id: String, o: A): Unit = db.put(bytes(id), JSON.writeValueAsBytes(o))
 

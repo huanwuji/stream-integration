@@ -4,13 +4,8 @@ import java.util.Properties
 import javax.sql.DataSource
 
 import akka.http.scaladsl.model.Uri
-import akka.stream.actor.ActorPublisher
-import akka.stream.actor.ActorPublisherMessage.Request
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
-import teleporter.stream.integration.component.{AddressBus, Roller}
-import teleporter.stream.integration.protocol.{Address, AddressParser}
-import teleporter.stream.integration.script.ScriptExec
-import teleporter.stream.integration.transaction.Trace
+import teleporter.stream.integration.protocol.AddressParser
 
 import scala.collection.JavaConversions._
 
@@ -38,32 +33,8 @@ case class DataSourceAddressParser(uri: Uri) extends AddressParser[DataSource](u
 }
 
 /**
- * source-dataSource://addressId?type=query&start=2015-01-01T00:00:00Z&period=3600&deadline=2015-01-02T00:00:00Z&timeRolling=true&page=1&pageSize=10&pageRolling=true&maxPage=20&sql=select * from test where start>${start} and<${end} limit ${page * pageSize}, pageSize
+ * source-dataSource://addressId?type=query&start=2015-01-01T00:00:00Z&period=3600&deadline=2015-01-02T00:00:00Z&page=1&pageSize=10&maxPage=20&sql=select * from test where start>${start} and<${end} limit ${page * pageSize}, pageSize
  */
-case class JdbcContext(sql: String, uri: Uri, address: Address[DataSource])
-
-class DataSourcePublisher(uri: Uri, trace: Trace[Map[String, Any]])(implicit addressBus: AddressBus, scriptExec: ScriptExec) extends ActorPublisher[Trace[Map[String, Any]]] {
-  var result: Iterator[Map[String, Any]] = Iterator.empty
-
-  @throws[Exception](classOf[Exception])
-  override def preStart(): Unit = {
-    result = Roller(uri)(uri ⇒ QueryIterator(trace.copy(point = uri)))
-  }
-
-  override def receive: Receive = {
-    case Request(n) ⇒
-      for (i ← 1L to n) {
-        if (result.hasNext) {
-          onNext(trace.copy(data = Some(result.next())))
-        } else {
-          if (!isCompleted) {
-            onCompleteThenStop()
-          }
-        }
-      }
-  }
-}
-
 class DataSourceComponent {
 
 }

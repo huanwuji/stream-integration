@@ -46,13 +46,13 @@ case class PageRoller(var page: Int, pageSize: Int, maxPage: Int = Int.MaxValue)
 }
 
 object PageRoller {
-  def apply(uri: Uri): PageRoller = {
+  def apply(uri: Uri): Iterator[Uri] = {
     val query = uri.query
     PageRoller(
       page = query.get("page").get.toInt,
       pageSize = query.get("pageSize").get.toInt,
       maxPage = query.get("maxPage").map(_.toInt).getOrElse(Int.MaxValue)
-    )
+    ).map(pageUri(uri, _))
   }
 
   def pageUri(uri: Uri, rollPage: RollPage): Uri = {
@@ -75,7 +75,7 @@ case class TimeRoller(var start: LocalDateTime, deadline: () ⇒ LocalDateTime, 
 }
 
 object TimeRoller {
-  def apply(uri: Uri): TimeRoller = {
+  def apply(uri: Uri): Iterator[Uri] = {
     val query = uri.query
     val deadline: () ⇒ LocalDateTime = query.get("deadline") match {
       case Some("now") ⇒
@@ -93,32 +93,12 @@ object TimeRoller {
       start = LocalDateTime.parse(query.get("start").get, DateTimeFormatter.ISO_INSTANT),
       deadline = deadline,
       period = Duration(query.get("period").get)
-    )
+    ).map(timeUri(uri, _))
   }
 
   def timeUri(uri: Uri, rollTime: RollTime): Uri = {
     Uris.updateQuery(uri, Seq(
       ("start", DateTimeFormatter.ISO_INSTANT.format(rollTime.start)),
       ("end", DateTimeFormatter.ISO_INSTANT.format(rollTime.end))))
-  }
-}
-
-object Roller {
-  def apply[A](uri: Uri)(uriIterator: Uri ⇒ UriIterator[A]): Iterator[A] = {
-    val query = uri.query
-    (query.get("timeRolling"), query.get("pageRolling")) match {
-      case (Some("true"), Some("true")) ⇒
-        val rollUris = for {
-          rollTime ← TimeRoller(uri)
-          rollPage ← PageRoller(uri)
-        } yield {
-            val rollUri = TimeRoller.timeUri(uri, rollTime)
-            PageRoller.pageUri(rollUri, rollPage)
-          }
-        rollUris.flatMap(uriIterator)
-      case (Some("true"), _) ⇒ TimeRoller(uri).flatMap(rollTime ⇒ uriIterator(TimeRoller.timeUri(uri, rollTime)))
-      case (_, Some("true")) ⇒ PageRoller(uri).flatMap(rollPage ⇒ uriIterator(PageRoller.pageUri(uri, rollPage)))
-      case _ ⇒ uriIterator(uri)
-    }
   }
 }
