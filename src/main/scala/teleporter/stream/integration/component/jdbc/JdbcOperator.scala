@@ -4,8 +4,7 @@ import java.sql.{ResultSet, ResultSetMetaData}
 import javax.sql.DataSource
 
 import org.apache.commons.dbutils.DbUtils
-import teleporter.stream.integration.component.{AddressBus, UriIterator}
-import teleporter.stream.integration.script.ScriptExec
+import teleporter.stream.integration.component.{AddressBus, UriIterator, UriResource}
 import teleporter.stream.integration.transaction.Trace
 
 /**
@@ -29,11 +28,11 @@ object JdbcOperator {
 }
 
 
-case class QueryIterator(trace: Trace[Map[String, Any]])(implicit addressBus: AddressBus, scriptExec: ScriptExec) extends UriIterator[Map[String, Any]](trace.point) {
+case class QueryIterator(trace: Trace[Map[String, Any]])(implicit addressBus: AddressBus, uriResource: UriResource) extends UriIterator[Map[String, Any]](trace.point) {
   val uri = trace.point
   val dataSource = addressBus.addressing[DataSource](uri.authority.host.toString())
   val conn = dataSource.getConnection
-  val ps = conn.prepareStatement(scriptExec.uriEval(uri, uri.query.get("sql").get))
+  val ps = conn.prepareStatement(uriResource.eval(uri, uri.query.get("sql").get))
   val rs = ps.executeQuery()
 
   import JdbcOperator._

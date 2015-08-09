@@ -56,7 +56,7 @@ object PageRoller {
   }
 
   def pageUri(uri: Uri, rollPage: RollPage): Uri = {
-    Uris.updateQuery(uri, Seq(("page", rollPage.currPage.toString), ("pageSize", rollPage.pageSize.toString)))
+    UriResource.updateQuery(uri, Seq(("page", rollPage.currPage.toString), ("pageSize", rollPage.pageSize.toString)))
   }
 }
 
@@ -97,7 +97,7 @@ object TimeRoller {
   }
 
   def timeUri(uri: Uri, rollTime: RollTime): Uri = {
-    Uris.updateQuery(uri, Seq(
+    UriResource.updateQuery(uri, Seq(
       ("start", DateTimeFormatter.ISO_INSTANT.format(rollTime.start)),
       ("end", DateTimeFormatter.ISO_INSTANT.format(rollTime.end))))
   }
