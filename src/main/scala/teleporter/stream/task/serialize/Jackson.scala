@@ -1,4 +1,4 @@
-package teleporter.stream.integration.serialize
+package teleporter.stream.task.serialize
 
 import java.text.SimpleDateFormat
 

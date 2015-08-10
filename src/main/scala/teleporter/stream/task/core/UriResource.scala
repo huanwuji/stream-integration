@@ -1,4 +1,4 @@
-package teleporter.stream.integration.component
+package teleporter.stream.task.core
 
 import java.net.URL
 import javax.script.ScriptEngine

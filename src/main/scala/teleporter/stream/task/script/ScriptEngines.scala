@@ -1,4 +1,4 @@
-package teleporter.stream.integration.script
+package teleporter.stream.task.script
 
 import javax.script.{ScriptEngine, ScriptEngineManager}
 

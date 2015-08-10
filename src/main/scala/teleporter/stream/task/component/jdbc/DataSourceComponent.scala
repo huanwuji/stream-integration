@@ -1,11 +1,11 @@
-package teleporter.stream.integration.component.jdbc
+package teleporter.stream.task.component.jdbc
 
 import java.util.Properties
 import javax.sql.DataSource
 
 import akka.http.scaladsl.model.Uri
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
-import teleporter.stream.integration.protocol.AddressParser
+import teleporter.stream.task.core.Address
 
 import scala.collection.JavaConversions._
 
@@ -16,19 +16,15 @@ import scala.collection.JavaConversions._
 /**
  * @param uri address-hikari:///jdbcUrl=mysql:jdbc://....
  */
-case class DataSourceAddressParser(uri: Uri) extends AddressParser[DataSource](uri) {
+case class DataSourceAddressParser(uri: Uri) extends Address[DataSource](uri) {
   override def build: DataSource = {
-    uri.scheme match {
-      case "hikari" ⇒
-        val props = new Properties()
-        props.putAll(uri.query.toMap)
-        val config = new HikariConfig(props)
-        val query = uri.query
-        val id = query.get("id").get
-        props.put("poolName", query.getOrElse("poolName", id))
-        new HikariDataSource(config)
-      case _ ⇒ throw new IllegalArgumentException(s"not support database pool, $uri")
-    }
+    val props = new Properties()
+    props.putAll(uri.query.toMap)
+    val config = new HikariConfig(props)
+    val query = uri.query
+    val id = query.get("id").get
+    props.put("poolName", query.getOrElse("poolName", id))
+    new HikariDataSource(config)
   }
 }
 

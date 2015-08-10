@@ -1,4 +1,4 @@
-package teleporter.stream.integration.component.jdbc
+package teleporter.stream.task.component.jdbc
 
 import java.util.concurrent.TimeUnit
 

@@ -1,9 +1,9 @@
-package teleporter.stream.integration.component.jdbc
+package teleporter.stream.task.component.jdbc
 
 import java.sql.{Connection, DriverManager}
 
 import akka.http.scaladsl.model.Uri
-import teleporter.stream.integration.protocol.{Address, AddressParser}
+import teleporter.stream.task.core.Address
 
 /**
  * author: huanwuji
@@ -19,15 +19,7 @@ case class JDBCClient(uri: Uri) {
 /**
  * @param uri jdbc:mysql://localhost:3306/simpsons
  */
-case class JdbcAddress(uri: Uri) extends AddressParser[JDBCClient](uri) {
-  override def parse: Address[JDBCClient] = {
-    uri.scheme match {
-      case "jdbc:mysql" ⇒ Class.forName("com.mysql.jdbc.Driver")
-      case _ ⇒ require(requirement = true, s"not found jdbc driver for schema:$uri")
-    }
-    Address(uri.query.getOrElse("id", uri.authority.toString()), JDBCClient(uri))
-  }
-
+case class JdbcAddress(uri: Uri) extends Address[JDBCClient](uri) {
   override def build: JDBCClient = {
     uri.scheme match {
       case "jdbc:mysql" ⇒ Class.forName("com.mysql.jdbc.Driver")
