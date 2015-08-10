@@ -1,4 +1,4 @@
-package teleporter.stream.task.transaction
+package teleporter.stream.integration.transaction
 
 import org.iq80.leveldb.DB
 import org.iq80.leveldb.impl.Iq80DBFactory._
@@ -21,7 +21,7 @@ trait TransactionStateStorage[A] {
 
 class LevelDBTransactionStateStorage[A](db: DB)(implicit m: Manifest[A]) extends TransactionStateStorage[A] {
 
-  import teleporter.stream.task.serialize.Jackson._
+  import teleporter.stream.integration.serialize.Jackson._
 
   override def get(id: String): A = JSON.readValue[A](db.get(bytes(id)))
 

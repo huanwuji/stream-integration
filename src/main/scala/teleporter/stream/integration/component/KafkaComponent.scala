@@ -1,4 +1,4 @@
-package teleporter.stream.task.component
+package teleporter.stream.integration.component
 
 import java.util.Properties
 
@@ -9,8 +9,8 @@ import kafka.consumer.ConsumerConfig
 import kafka.javaapi.consumer.ConsumerConnector
 import kafka.message.MessageAndMetadata
 import org.apache.kafka.clients.producer.{KafkaProducer, Producer}
-import teleporter.stream.task.core._
-import teleporter.stream.task.transaction.Trace
+import teleporter.stream.integration.core._
+import teleporter.stream.integration.transaction.Trace
 
 import scala.collection.JavaConversions._
 

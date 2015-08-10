@@ -1,8 +1,8 @@
-package teleporter.stream.task.transaction
+package teleporter.stream.integration.transaction
 
 import akka.http.scaladsl.model.Uri
 import com.fasterxml.jackson.annotation.JsonIgnore
-import teleporter.stream.task.transaction.TransactionState._
+import teleporter.stream.integration.transaction.TransactionState._
 
 /**
  * author: huanwuji

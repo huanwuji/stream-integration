@@ -1,9 +1,9 @@
-package teleporter.stream.task.core
+package teleporter.stream.integration.core
 
 import akka.stream.actor.ActorPublisher
 import akka.stream.actor.ActorPublisherMessage.Request
-import teleporter.stream.task.core.AddressBus
-import teleporter.stream.task.transaction.Trace
+import teleporter.stream.integration.core.AddressBus
+import teleporter.stream.integration.transaction.Trace
 
 /**
  * author: huanwuji

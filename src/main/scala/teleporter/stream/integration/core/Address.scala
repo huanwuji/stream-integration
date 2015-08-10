@@ -1,4 +1,4 @@
-package teleporter.stream.task.core
+package teleporter.stream.integration.core
 
 import akka.http.scaladsl.model.Uri
 

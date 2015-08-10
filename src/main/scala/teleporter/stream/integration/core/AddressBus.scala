@@ -1,8 +1,8 @@
-package teleporter.stream.task.core
+package teleporter.stream.integration.core
 
 import akka.http.scaladsl.model.Uri
-import teleporter.stream.task.component.jdbc.DataSourceAddressParser
-import teleporter.stream.task.component.{KafkaConsumerAddressParser, KafkaProducerAddressParser}
+import teleporter.stream.integration.component.jdbc.DataSourceAddressParser
+import teleporter.stream.integration.component.{KafkaConsumerAddressParser, KafkaProducerAddressParser}
 
 /**
  * date 2015/8/3.

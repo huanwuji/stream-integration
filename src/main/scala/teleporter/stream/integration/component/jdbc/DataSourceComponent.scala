@@ -1,11 +1,11 @@
-package teleporter.stream.task.component.jdbc
+package teleporter.stream.integration.component.jdbc
 
 import java.util.Properties
 import javax.sql.DataSource
 
 import akka.http.scaladsl.model.Uri
 import com.zaxxer.hikari.{HikariConfig, HikariDataSource}
-import teleporter.stream.task.core.Address
+import teleporter.stream.integration.core.Address
 
 import scala.collection.JavaConversions._
 

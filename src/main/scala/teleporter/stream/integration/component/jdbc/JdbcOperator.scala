@@ -1,11 +1,11 @@
-package teleporter.stream.task.component.jdbc
+package teleporter.stream.integration.component.jdbc
 
 import java.sql.{ResultSet, ResultSetMetaData}
 import javax.sql.DataSource
 
 import org.apache.commons.dbutils.DbUtils
-import teleporter.stream.task.core.{AddressBus, UriIterator, UriResource}
-import teleporter.stream.task.transaction.Trace
+import teleporter.stream.integration.core.{AddressBus, UriIterator, UriResource}
+import teleporter.stream.integration.transaction.Trace
 
 /**
  * author: huanwuji

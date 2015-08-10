@@ -1,9 +1,9 @@
-package teleporter.stream.task.component.jdbc
+package teleporter.stream.integration.component.jdbc
 
 import java.sql.{Connection, DriverManager}
 
 import akka.http.scaladsl.model.Uri
-import teleporter.stream.task.core.Address
+import teleporter.stream.integration.core.Address
 
 /**
  * author: huanwuji

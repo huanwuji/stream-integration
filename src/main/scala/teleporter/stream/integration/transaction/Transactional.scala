@@ -1,4 +1,4 @@
-package teleporter.stream.task.transaction
+package teleporter.stream.integration.transaction
 
 /**
  * date 2015/8/3.
