@@ -1,4 +1,4 @@
-package teleporter.stream.task.component
+package teleporter.stream.integration.component
 
 import java.time.LocalDateTime
 
