@@ -1,4 +1,4 @@
-package teleporter.stream.task.component.jdbc
+package teleporter.stream.integration.component.jdbc
 
 import java.net.URI
 
