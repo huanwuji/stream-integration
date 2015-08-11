@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit
 
 import com.google.common.base.Stopwatch
 import org.scalatest.FunSuite
+import teleporter.stream.integration.script.ScriptEngines
 
 /**
  * date 2015/8/3.
@@ -28,7 +29,7 @@ class ScriptEnginesTest extends FunSuite {
     println(watch.elapsed(TimeUnit.MILLISECONDS))
   }
   test("testNashorn") {
-    val nashorn = ScriptEngines.getNashorn()
+    val nashorn = ScriptEngines.getNashorn
     nashorn.put("format", DateTimeFormatter.ISO_DATE)
     val watch = Stopwatch.createStarted()
     nashorn.createBindings()
@@ -44,7 +45,7 @@ class ScriptEnginesTest extends FunSuite {
     println(watch1.elapsed(TimeUnit.MILLISECONDS))
   }
   test("nashorn bindings") {
-    val nashorn = ScriptEngines.getNashorn()
+    val nashorn = ScriptEngines.getNashorn
     nashorn.put("x", 2)
     val bindings = nashorn.createBindings()
     bindings.put("x", 1)
