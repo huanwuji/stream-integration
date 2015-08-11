@@ -28,17 +28,20 @@ class PublisherActor(start: Int) extends ActorPublisher[Int] {
 
   override def receive: Receive = {
     case Request(n) ⇒
-      for (i ← 1L to n) {
-        if (iterator.hasNext) {
-          val curr = iterator.next()
-          if (curr == 10 && flag) {
-            //            flag = false
-            println(s"flag: $flag")
-            throw new RuntimeException("Can you process it")
-          }
-          onNext(curr)
-        }
+      while (totalDemand > 0) {
+        onNext(iterator.next())
       }
+    //      for (i ← 1L to n) {
+    //        if (iterator.hasNext) {
+    //          val curr = iterator.next()
+    //          if (curr == 10 && flag) {
+    //            //            flag = false
+    //            println(s"flag: $flag")
+    //            throw new RuntimeException("Can you process it")
+    //          }
+    //          onNext(curr)
+    //        }
+    //      }
   }
 
   @throws[Exception](classOf[Exception])

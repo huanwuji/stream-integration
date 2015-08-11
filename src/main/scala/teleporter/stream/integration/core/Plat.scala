@@ -1,12 +1,14 @@
 package teleporter.stream.integration.core
 
+import akka.http.scaladsl.model.Uri
+
 import scala.collection.concurrent.TrieMap
 
 /**
  * date 2015/8/3.
  * @author daikui
  */
-trait Plat[A] {
+trait Plat[A <: Uri] {
   val addressBus = TrieMap[String, Any]()
   val addressUri = TrieMap[String, A]()
 

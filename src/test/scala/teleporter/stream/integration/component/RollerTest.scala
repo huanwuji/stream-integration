@@ -1,10 +1,10 @@
-package teleporter.stream.integration.component
+package teleporter.stream.task.component
 
 import java.time.LocalDateTime
 
 import akka.http.scaladsl.model.Uri
 import org.scalatest.FunSuite
-import teleporter.stream.integration.core.{TimeRoller, PageRoller}
+import teleporter.stream.integration.core.{PageRoller, TimeRoller}
 
 import scala.concurrent.duration._
 
