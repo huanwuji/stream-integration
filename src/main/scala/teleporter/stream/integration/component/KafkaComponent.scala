@@ -19,7 +19,7 @@ import scala.collection.JavaConversions._
  * @author daikui
  */
 /**
- * @param uri address-kafka-producer:///id=etl-kafka&bootstrap.servers=10.200.187.56:9091&acks=1&key.serializer=org.apache.kafka.common.serialization.ByteArraySerializer&value.serializer=org.apache.kafka.common.serialization.ByteArraySerializer&compression.type=gzip
+ * @param uri address://kafka.producer/id=etl-kafka&bootstrap.servers=10.200.187.56:9091&acks=1&key.serializer=org.apache.kafka.common.serialization.ByteArraySerializer&value.serializer=org.apache.kafka.common.serialization.ByteArraySerializer&compression.type=gzip
  */
 case class KafkaProducerAddressParser(uri: Uri) extends Address[Producer[Array[Byte], Array[Byte]]](uri) with LazyLogging {
   override def build: Producer[Array[Byte], Array[Byte]] = {
@@ -33,19 +33,18 @@ case class KafkaProducerAddressParser(uri: Uri) extends Address[Producer[Array[B
 }
 
 /**
- * @param uri address-kafka-consumer:///id=etl_kafka&zookeeper.connect=&group.id=&zookeeper.session.timeout.ms=400&zookeeper.sync.time.ms=200&auto.commit.interval.ms=60000
+ * @param uri address://kafka.consumer/id=etl_kafka&zookeeper.connect=&group.id=&zookeeper.session.timeout.ms=400&zookeeper.sync.time.ms=200&auto.commit.interval.ms=60000
  */
 case class KafkaConsumerAddressParser(uri: Uri) extends Address[ConsumerConnector](uri) {
   override def build: ConsumerConnector = {
     val props = new Properties()
     props.putAll(uri.query.toMap)
-    new ZookeeperConsumerConnector
     kafka.consumer.Consumer.createJavaConsumerConnector(new ConsumerConfig(props))
   }
 }
 
 /**
- * @param trace source-kafka-consumer://addressId?topic=trade
+ * @param trace source://addressId?topic=trade
  */
 class KafkaConsumerIterator(trace: Trace[MessageAndMetadata[Array[Byte], Array[Byte]]])(implicit addressBus: AddressBus, uriResource: UriResource) extends UriIterator[MessageAndMetadata[Array[Byte], Array[Byte]]](trace.point) {
   val uri = trace.point

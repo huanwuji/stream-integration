@@ -10,10 +10,10 @@ import teleporter.stream.integration.component.{KafkaConsumerAddressParser, Kafk
  */
 class SourceBus extends Plat[Uri] {
   override protected def build(description: Uri): Any = {
-    description.scheme.stripPrefix("source-") match {
+    description.authority.host.toString() match {
       case "hikari" ⇒ DataSourceAddressParser(description).build
-      case "kafka-consumer" ⇒ KafkaConsumerAddressParser(description).build
-      case "kafka-producer" ⇒ KafkaProducerAddressParser(description).build
+      case "kafka.consumer" ⇒ KafkaConsumerAddressParser(description).build
+      case "kafka.producer" ⇒ KafkaProducerAddressParser(description).build
       case _ ⇒ throw new NoSuchElementException(s"Can't found address type:$description")
     }
   }
