@@ -3,9 +3,9 @@ package teleporter.stream.integration.component.jdbc
 import java.sql.{ResultSet, ResultSetMetaData}
 import javax.sql.DataSource
 
+import akka.http.scaladsl.model.Uri
 import org.apache.commons.dbutils.DbUtils
 import teleporter.stream.integration.core.{AddressBus, UriIterator, UriResource}
-import teleporter.stream.integration.transaction.Trace
 
 /**
  * author: huanwuji
@@ -28,8 +28,7 @@ object JdbcOperator {
 }
 
 
-case class QueryIterator(trace: Trace[Map[String, Any]])(implicit addressBus: AddressBus, uriResource: UriResource) extends UriIterator[Map[String, Any]](trace.point) {
-  val uri = trace.point
+case class QueryIterator(uri: Uri)(implicit addressBus: AddressBus, uriResource: UriResource) extends UriIterator[Map[String, Any]](uri) {
   val dataSource = addressBus.addressing[DataSource](uri.authority.host.toString())
   val conn = dataSource.getConnection
   val ps = conn.prepareStatement(uriResource.eval(uri, uri.query.get("sql").get))
