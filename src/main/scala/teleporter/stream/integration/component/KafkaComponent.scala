@@ -2,7 +2,7 @@ package teleporter.stream.integration.component
 
 import java.util.Properties
 
-import akka.actor.{Actor, ActorLogging}
+import akka.actor.{Actor, ActorLogging, ActorRef}
 import akka.http.scaladsl.model.Uri
 import akka.stream.actor.ActorPublisherMessage.Request
 import akka.stream.actor.ActorSubscriberMessage.OnNext
@@ -14,7 +14,6 @@ import kafka.javaapi.consumer.ZkKafkaConsumerConnector
 import kafka.message.MessageAndMetadata
 import org.apache.kafka.clients.producer._
 import teleporter.stream.integration.core._
-import teleporter.stream.integration.task.Task
 
 import scala.collection.JavaConversions._
 import scala.collection.concurrent.TrieMap
@@ -98,9 +97,8 @@ class KafkaPublisher(uri: Uri)(implicit plat: UriPlat) extends ActorPublisher[Ei
   }
 }
 
-class KafkaSubscriber(uri: Uri, task: Task)(implicit plat: UriPlat, uriResource: UriResource)
+class KafkaSubscriber(uri: Uri)(implicit plat: UriPlat, uriResource: UriResource)
   extends ActorSubscriber with ActorLogging {
-  val sourceRef = context.actorSelection(s"/user/${task.id}-${task.sourceId}")
   val producer = plat.addressing[Producer[Array[Byte], Array[Byte]]](uri.authority.host.toString())
   val topic = uri.query.get("topic").get
 
@@ -118,7 +116,7 @@ class KafkaSubscriber(uri: Uri, task: Task)(implicit plat: UriPlat, uriResource:
               }
             }
           })
-        case Left(control) ⇒ sourceRef ! control
+        case Left((sourceRef: ActorRef, control)) ⇒ sourceRef ! control
       }
   }
 }

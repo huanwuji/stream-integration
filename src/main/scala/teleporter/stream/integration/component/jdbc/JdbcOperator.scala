@@ -5,7 +5,7 @@ import javax.sql.DataSource
 
 import akka.http.scaladsl.model.Uri
 import org.apache.commons.dbutils.DbUtils
-import teleporter.stream.integration.core.{AddressBus, UriIterator, UriResource}
+import teleporter.stream.integration.core.{UriIterator, UriPlat, UriResource}
 
 /**
  * author: huanwuji
@@ -28,8 +28,8 @@ object JdbcOperator {
 }
 
 
-case class QueryIterator(uri: Uri)(implicit addressBus: AddressBus, uriResource: UriResource) extends UriIterator[Map[String, Any]](uri) {
-  val dataSource = addressBus.addressing[DataSource](uri.authority.host.toString())
+case class QueryIterator(uri: Uri)(implicit plat: UriPlat, uriResource: UriResource) extends UriIterator[Map[String, Any]](uri) {
+  val dataSource = plat.addressing[DataSource](uri.authority.host.toString())
   val conn = dataSource.getConnection
   val ps = conn.prepareStatement(uriResource.eval(uri, uri.query.get("sql").get))
   val rs = ps.executeQuery()

@@ -7,7 +7,7 @@ import akka.stream.actor.ActorPublisherMessage.Request
  * author: huanwuji
  * created: 2015/8/9.
  */
-class UriSource[A](iterator: UriIterator[A])(implicit addressBus: AddressBus) extends ActorPublisher[A] {
+class UriSource[A](iterator: UriIterator[A])(implicit plat: UriPlat) extends ActorPublisher[A] {
   override def receive: Receive = {
     case Request(n) ⇒
       for (i ← 1L to n) {

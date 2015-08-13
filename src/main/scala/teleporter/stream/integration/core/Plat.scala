@@ -3,7 +3,6 @@ package teleporter.stream.integration.core
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.model.Uri
 import teleporter.stream.integration.component.{KafkaConsumerAddressParser, KafkaProducerAddressParser, KafkaPublisher, KafkaSubscriber}
-import teleporter.stream.integration.task.Task
 
 import scala.collection.concurrent.TrieMap
 
@@ -57,45 +56,35 @@ class UriPlat extends Plat[Uri] {
     }
   }
 
-  def sourceSinkBuild(id: String, task: Task)(implicit system: ActorSystem): ActorRef = {
-    val description = uriResources(id)
+  def sourceSinkBuild(taskId: String, resourceId: String)(implicit system: ActorSystem): ActorRef = {
+    val description = uriResources(resourceId)
+    val id = s"$taskId-$resourceId"
     description.scheme match {
       case "source" ⇒
-        val source = sourceBuild(description, task)
-        system.actorOf(source, s"${task.id}-${task.sourceId}")
+        val source = sourceBuild(description)
+        system.actorOf(source, id)
       case "sink" ⇒
-        val sink = sinkBuild(description, task)
-        system.actorOf(sink, s"${task.id}-${task.sinkId}")
+        val sink = sinkBuild(description)
+        system.actorOf(sink, id)
     }
   }
 
-  def sourceSinkBuild(description: Uri, task: Task)(implicit system: ActorSystem): ActorRef = {
-    description.scheme match {
-      case "source" ⇒
-        val source = sourceBuild(description, task)
-        system.actorOf(source, s"${task.id}-${task.sourceId}")
-      case "sink" ⇒
-        val sink = sinkBuild(description, task)
-        system.actorOf(sink, s"${task.id}-${task.sinkId}")
-    }
-  }
-
-  private def sourceBuild(description: Uri, task: Task): Props = {
+  private def sourceBuild(description: Uri): Props = {
     description.authority.host.address() match {
       case host(protocol, name, area) ⇒
         protocol match {
           case "kafka" ⇒ Props(classOf[KafkaPublisher], description)
-          case "hikari" ⇒
+          case "hikari" ⇒ Props.empty
         }
     }
   }
 
-  private def sinkBuild(description: Uri, task: Task): Props = {
+  private def sinkBuild(description: Uri): Props = {
     description.authority.host.address() match {
       case host(protocol, name, area) ⇒
         protocol match {
-          case "kafka" ⇒ Props(classOf[KafkaSubscriber], description, task)
-          case "hikari" ⇒
+          case "kafka" ⇒ Props(classOf[KafkaSubscriber], description)
+          case "hikari" ⇒ Props.empty
         }
     }
   }
