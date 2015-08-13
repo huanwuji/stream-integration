@@ -5,7 +5,6 @@ import java.util.concurrent.TimeUnit
 
 import com.google.common.base.Stopwatch
 import org.scalatest.FunSuite
-import teleporter.stream.integration.script.ScriptEngines
 
 /**
  * date 2015/8/3.

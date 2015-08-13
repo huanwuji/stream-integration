@@ -172,6 +172,12 @@
         </dependency>
 
         <dependency>
+            <groupId>com.taobao.top</groupId>
+            <artifactId>taobao-sdk-java-auto</artifactId>
+            <version>1438842428099-20150806</version>
+        </dependency>
+
+        <dependency>
             <groupId>org.webjars</groupId>
             <artifactId>underscorejs</artifactId>
             <version>1.8.3</version>

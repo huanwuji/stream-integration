@@ -2,7 +2,7 @@ package teleporter.stream.integration.component
 
 import java.util.Properties
 
-import akka.actor.{Actor, ActorLogging, ActorRef}
+import akka.actor.{Actor, ActorLogging}
 import akka.http.scaladsl.model.Uri
 import akka.stream.actor.ActorPublisherMessage.Request
 import akka.stream.actor.ActorSubscriberMessage.OnNext
@@ -82,7 +82,7 @@ class KafkaPublisher(uri: Uri)(implicit plat: UriPlat) extends ActorPublisher[Ei
   def sendConfirm: Receive = {
     case Request(i) ⇒
       while (totalDemand > 0 && partitionStatusIterator.hasNext) {
-        onNext(Left(partitionStatusIterator.next()))
+        onNext(Left(ActorCallback(self, partitionStatusIterator.next())))
       }
       if (!partitionStatusIterator.hasNext) {
         context.unbecome()
@@ -116,7 +116,7 @@ class KafkaSubscriber(uri: Uri)(implicit plat: UriPlat, uriResource: UriResource
               }
             }
           })
-        case Left((sourceRef: ActorRef, control)) ⇒ sourceRef ! control
+        case Left(ActorCallback(source, state)) ⇒ source ! state
       }
   }
 }

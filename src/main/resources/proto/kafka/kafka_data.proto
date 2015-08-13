@@ -1,0 +1,11 @@
+package kafka;
+
+message KafkaDataList {
+    repeated KafkaData kafkaData = 1;
+}
+
+message KafkaData {
+    required string topic = 2;
+    required bytes key = 3;
+    required bytes message = 4;
+}

@@ -1,5 +1,7 @@
 package teleporter.stream.integration.component
 
+import akka.actor.ActorRef
+
 /**
  * date 2015/8/3.
  * @author daikui
@@ -7,3 +9,5 @@ package teleporter.stream.integration.component
 trait Cmd
 
 object Committed extends Cmd
+
+case class ActorCallback(source: ActorRef, state: Any)

@@ -2,6 +2,10 @@ package teleporter.stream.integration.core
 
 import akka.actor.{ActorRef, ActorSystem, Props}
 import akka.http.scaladsl.model.Uri
+import akka.stream.actor.{ActorPublisher, ActorSubscriber}
+import akka.stream.scaladsl.{Sink, Source}
+import com.typesafe.config.Config
+import org.reactivestreams.{Publisher, Subscriber}
 import teleporter.stream.integration.component.{KafkaConsumerAddressParser, KafkaProducerAddressParser, KafkaPublisher, KafkaSubscriber}
 
 import scala.collection.concurrent.TrieMap
@@ -13,7 +17,7 @@ import scala.collection.concurrent.TrieMap
 trait Plat[A <: Uri]
 
 class UriPlat extends Plat[Uri] {
-  val host = """([\w-]+)\.([\w-]+)\.([\w+])""".r
+  val host = """([\w-]+)\.([\w-]+)\.([\w-]+)""".r
 
   val bus = TrieMap[String, Any]()
   val uriResources = TrieMap[String, Uri]()
@@ -56,20 +60,55 @@ class UriPlat extends Plat[Uri] {
     }
   }
 
-  def sourceSinkBuild(taskId: String, resourceId: String)(implicit system: ActorSystem): ActorRef = {
-    val description = uriResources(resourceId)
-    val id = s"$taskId-$resourceId"
-    description.scheme match {
-      case "source" ⇒
-        val source = sourceBuild(description)
-        system.actorOf(source, id)
-      case "sink" ⇒
-        val sink = sinkBuild(description)
-        system.actorOf(sink, id)
-    }
+  def source[T](taskId: String, resourceId: String)(implicit system: ActorSystem): Source[T, Unit] = {
+    Source(publisher(taskId, resourceId))
   }
 
-  private def sourceBuild(description: Uri): Props = {
+  def sink[T](taskId: String, resourceId: String)(implicit system: ActorSystem): Sink[T, Unit] = {
+    Sink(subscriber[T](taskId, resourceId))
+  }
+
+  def publisher[A](taskId: String, resourceId: String)(implicit system: ActorSystem): Publisher[A] = {
+    val description = uriResources(resourceId)
+    val id = s"$taskId-$resourceId"
+    val source = sourceProps(description)
+    val actorRef = system.actorOf(source, id)
+    ActorPublisher[A](actorRef)
+  }
+
+
+  def subscriber[A](taskId: String, resourceId: String)(implicit system: ActorSystem): Subscriber[A] = {
+    val description = uriResources(resourceId)
+    val id = s"$taskId-$resourceId"
+    val sink = sinkProps(description)
+    val actorRef = system.actorOf(sink, id)
+    ActorSubscriber(actorRef)
+  }
+
+  def publisherActorRef(taskId: String, resourceId: String)(implicit system: ActorSystem): ActorRef = {
+    val id = s"$taskId-$resourceId"
+    val source = sourceProps(resourceId)
+    system.actorOf(source, id)
+  }
+
+
+  def subscriberActorRef(taskId: String, resourceId: String)(implicit system: ActorSystem): ActorRef = {
+    val id = s"$taskId-$resourceId"
+    val sink = sinkProps(resourceId)
+    system.actorOf(sink, id)
+  }
+
+  private def sourceProps(resourceId: String): Props = {
+    val description = uriResources(resourceId)
+    sourceProps(description)
+  }
+
+  private def sinkProps(resourceId: String): Props = {
+    val description = uriResources(resourceId)
+    sinkProps(description)
+  }
+
+  private def sourceProps(description: Uri): Props = {
     description.authority.host.address() match {
       case host(protocol, name, area) ⇒
         protocol match {
@@ -79,7 +118,7 @@ class UriPlat extends Plat[Uri] {
     }
   }
 
-  private def sinkBuild(description: Uri): Props = {
+  private def sinkProps(description: Uri): Props = {
     description.authority.host.address() match {
       case host(protocol, name, area) ⇒
         protocol match {
@@ -87,5 +126,22 @@ class UriPlat extends Plat[Uri] {
           case "hikari" ⇒ Props.empty
         }
     }
+  }
+}
+
+object UriPlat {
+  def apply(configs: List[_ <: Config]): UriPlat = {
+    val plat = new UriPlat()
+    for (config ← configs) {
+      plat.register(config.getString("id"), Uri(config.getString("uri")))
+    }
+    plat
+  }
+
+  def apply(configs: List[_ <: Config], plat: UriPlat): UriPlat = {
+    for (config ← configs) {
+      plat.register(config.getString("id"), Uri(config.getString("uri")))
+    }
+    plat
   }
 }
