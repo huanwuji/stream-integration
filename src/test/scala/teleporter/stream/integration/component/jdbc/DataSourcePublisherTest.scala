@@ -8,7 +8,7 @@ import akka.stream.actor.ActorPublisherMessage.Request
 import akka.stream.actor.ActorSubscriberMessage.{OnComplete, OnError, OnNext}
 import akka.stream.actor._
 import akka.stream.scaladsl.{Sink, Source}
-import akka.stream.{ActorAttributes, ActorMaterializer, ActorMaterializerSettings, Supervision}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, Supervision}
 import com.google.common.util.concurrent.Uninterruptibles
 import org.scalatest.FunSuite
 
@@ -63,7 +63,11 @@ class PublisherActor(start: Int) extends ActorPublisher[Int] {
 }
 
 class SubscriberActor extends ActorSubscriber {
-  override protected def requestStrategy: RequestStrategy = OneByOneRequestStrategy
+  override protected def requestStrategy: RequestStrategy = ZeroRequestStrategy
+
+  import context.dispatcher
+
+  context.system.scheduler.schedule(10.seconds, 10.seconds, self, "request")
 
   override val supervisorStrategy =
     OneForOneStrategy(maxNrOfRetries = 10, withinTimeRange = 1.minutes) {
@@ -72,14 +76,18 @@ class SubscriberActor extends ActorSubscriber {
 
 
   override def receive: Actor.Receive = {
-    case OnNext(i) ⇒ println(i); throw new IllegalArgumentException("subscript error");
+    case OnNext(i) ⇒
+      println(i)
+//      request(1)
     case OnError(cause: Throwable) ⇒ println(s"onError")
+    case "request" ⇒ request(1)
     case OnComplete ⇒ println("onComplete")
   }
 
   @throws[Exception](classOf[Exception])
   override def preStart(): Unit = {
     println("subscriber preStart")
+    request(2)
   }
 
   @throws[Exception](classOf[Exception])
@@ -105,8 +113,9 @@ class DataSourcePublisherTest extends FunSuite {
     val publisherRef = system.actorOf(Props(classOf[PublisherActor], 3))
     val subscriberRef = system.actorOf(Props(new SubscriberActor()))
     //        Source(ActorPublisher(publisherRef)).withAttributes(ActorAttributes.supervisionStrategy(decider)).to(Sink(ActorSubscriber(subscriberRef))).run()
-    Source(ActorPublisher[Int](publisherRef)).to(Sink(ActorSubscriber[Int](subscriberRef)).withAttributes(ActorAttributes.supervisionStrategy(decider))).run()
+    //    Source(ActorPublisher[Int](publisherRef)).to(Sink(ActorSubscriber[Int](subscriberRef)).withAttributes(ActorAttributes.supervisionStrategy(decider))).run()
     //    val future = Source(ActorPublisher(publisherRef)).to(Sink.foreach(println)).run()
+    Source(1 to 20).to(Sink(ActorSubscriber[Int](subscriberRef))).run()
     //    Await.result(future, 1.minutes)
     Uninterruptibles.sleepUninterruptibly(1, TimeUnit.MINUTES)
   }

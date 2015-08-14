@@ -5,8 +5,9 @@ import akka.http.scaladsl.model.Uri
 import akka.stream.actor.{ActorPublisher, ActorSubscriber}
 import akka.stream.scaladsl.{Sink, Source}
 import com.typesafe.config.Config
+import com.typesafe.scalalogging.LazyLogging
 import org.reactivestreams.{Publisher, Subscriber}
-import teleporter.stream.integration.component.{KafkaConsumerAddressParser, KafkaProducerAddressParser, KafkaPublisher, KafkaSubscriber}
+import teleporter.stream.integration.component._
 
 import scala.collection.concurrent.TrieMap
 
@@ -16,7 +17,7 @@ import scala.collection.concurrent.TrieMap
  */
 trait Plat[A <: Uri]
 
-class UriPlat extends Plat[Uri] {
+class UriPlat extends Plat[Uri] with LazyLogging {
   val host = """([\w-]+)\.([\w-]+)\.([\w-]+)""".r
 
   val bus = TrieMap[String, Any]()
@@ -47,6 +48,7 @@ class UriPlat extends Plat[Uri] {
   }
 
   def addressBuild(description: Uri): Any = {
+    logger.info("init address: {}", description)
     description.authority.host.address() match {
       case host(protocol, name, area) ⇒
         protocol match {
@@ -109,20 +111,23 @@ class UriPlat extends Plat[Uri] {
   }
 
   private def sourceProps(description: Uri): Props = {
+    logger.info("init source, {}", description)
     description.authority.host.address() match {
       case host(protocol, name, area) ⇒
         protocol match {
-          case "kafka" ⇒ Props(classOf[KafkaPublisher], description)
+          case "kafka" ⇒ Props(classOf[KafkaPublisher], description, this)
           case "hikari" ⇒ Props.empty
         }
     }
   }
 
   private def sinkProps(description: Uri): Props = {
+    logger.info("init sink, {}", description)
     description.authority.host.address() match {
       case host(protocol, name, area) ⇒
         protocol match {
-          case "kafka" ⇒ Props(classOf[KafkaSubscriber], description)
+          case "kafka" ⇒ Props(classOf[KafkaSubscriber], description, this)
+          case "adapt" ⇒ Props(classOf[AdapterSubscriber], description)
           case "hikari" ⇒ Props.empty
         }
     }

@@ -57,7 +57,7 @@ class KafkaPublisher(uri: Uri)(implicit plat: UriPlat) extends ActorPublisher[Ei
 
   import context.dispatcher
 
-  val consumerConnector = plat.addressing[ZkKafkaConsumerConnector](uri.authority.host.toString())
+  val consumerConnector = plat.addressing[ZkKafkaConsumerConnector](uri)
   val topic = uri.query.get("topic").get
   val consumerMap = consumerConnector.createMessageStreams(Map[String, Integer](topic → 1))
   val stream = consumerMap.get(topic).get(0)
@@ -69,6 +69,7 @@ class KafkaPublisher(uri: Uri)(implicit plat: UriPlat) extends ActorPublisher[Ei
   override def receive: Receive = {
     case Request(i) ⇒
       while (totalDemand > 0 && it.hasNext()) {
+        println(s"totalDemand:$totalDemand")
         val kafkaMessage = it.next()
         onNext(Right(it.next()))
         topicPartitionOffsetMap.put(TopicAndPartition(kafkaMessage.topic, kafkaMessage.partition), kafkaMessage.offset)
@@ -97,7 +98,7 @@ class KafkaPublisher(uri: Uri)(implicit plat: UriPlat) extends ActorPublisher[Ei
   }
 }
 
-class KafkaSubscriber(uri: Uri)(implicit plat: UriPlat, uriResource: UriResource)
+class KafkaSubscriber(uri: Uri)(implicit plat: UriPlat)
   extends ActorSubscriber with ActorLogging {
   val producer = plat.addressing[Producer[Array[Byte], Array[Byte]]](uri.authority.host.toString())
   val topic = uri.query.get("topic").get
