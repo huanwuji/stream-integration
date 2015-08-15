@@ -1,7 +1,8 @@
 package kafka;
 
 message KafkaDataList {
-    repeated KafkaData kafkaData = 1;
+    required int64 sequenceNr = 1;
+    repeated KafkaData kafkaData = 2;
 }
 
 message KafkaData {
