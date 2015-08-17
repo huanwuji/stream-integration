@@ -26,11 +26,8 @@ class AdapterSubscriber(uri: Uri) extends ActorSubscriber {
 
   override def receive: Receive = {
     case OnNext(element: AnyRef) ⇒
-      println(s"queue size: ${queue.size()}")
       queue.offer(element)
-      println("has blocking ????")
     case Request(n) ⇒
-      println(s"tcp request:$n")
       val size = n.toInt
       val listBuffer = ListBuffer[AnyRef]()
       queue.drainTo(listBuffer, size)

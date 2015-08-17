@@ -1,23 +1,23 @@
 package teleporter.integration.component
 
 import java.util.Properties
+import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorLogging}
 import akka.http.scaladsl.model.Uri
 import akka.stream.actor.ActorPublisherMessage.Request
 import akka.stream.actor.ActorSubscriberMessage.OnNext
 import akka.stream.actor.{ActorPublisher, ActorSubscriber, RequestStrategy, WatermarkRequestStrategy}
+import com.google.common.util.concurrent.Uninterruptibles
 import com.typesafe.scalalogging.LazyLogging
-import kafka.common.TopicAndPartition
 import kafka.consumer.ConsumerConfig
 import kafka.javaapi.consumer.ZkKafkaConsumerConnector
 import kafka.message.MessageAndMetadata
 import org.apache.kafka.clients.producer._
 import teleporter.integration.core._
+import teleporter.integration.persistence.{TeleId, TeleporterMessage}
 
 import scala.collection.JavaConversions._
-import scala.collection.concurrent.TrieMap
-import scala.concurrent.duration._
 
 /**
  * date 2015/8/3.
@@ -53,48 +53,23 @@ case class KafkaConsumerAddressParser(uri: Uri) extends Address[ZkKafkaConsumerC
 /**
  * @param uri source://addressId?topic=trade
  */
-class KafkaPublisher(uri: Uri)(implicit plat: UriPlat) extends ActorPublisher[Either[Any, MessageAndMetadata[Array[Byte], Array[Byte]]]] {
-
-  import context.dispatcher
-
+class KafkaPublisher(uri: Uri)(implicit plat: UriPlat) extends ActorPublisher[TeleporterMessage[MessageAndMetadata[Array[Byte], Array[Byte]]]] with ActorLogging {
   val consumerConnector = plat.addressing[ZkKafkaConsumerConnector](uri)
   val topic = uri.query.get("topic").get
   val consumerMap = consumerConnector.createMessageStreams(Map[String, Integer](topic → 1))
   val stream = consumerMap.get(topic).get(0)
   val it = stream.iterator()
-  val topicPartitionOffsetMap = TrieMap[TopicAndPartition, Long]()
-  var partitionStatusIterator: Iterator[(TopicAndPartition, Long)] = null
-  context.system.scheduler.schedule(1.minutes, 1.minutes, self, Committed)
+  val persistenceId = "kafkaPublisher".hashCode
+  var sequenceNr: Long = 0L
 
   override def receive: Receive = {
-    case Request(i) ⇒
+    case Request(n) ⇒
+      log.info(s"$persistenceId: totalDemand:$totalDemand")
       while (totalDemand > 0 && it.hasNext()) {
-        println(s"totalDemand:$totalDemand")
-        val kafkaMessage = it.next()
-        onNext(Right(it.next()))
-        topicPartitionOffsetMap.put(TopicAndPartition(kafkaMessage.topic, kafkaMessage.partition), kafkaMessage.offset)
+        onNext(TeleporterMessage(TeleId(persistenceId, sequenceNr), it.next()))
+        sequenceNr += 1
+        Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS)
       }
-    case partitionStatus: PartitionStatus ⇒ commit(partitionStatus)
-    case Committed ⇒
-      partitionStatusIterator = topicPartitionOffsetMap.iterator
-      context.become(sendConfirm)
-  }
-
-  def sendConfirm: Receive = {
-    case Request(i) ⇒
-      while (totalDemand > 0 && partitionStatusIterator.hasNext) {
-        onNext(Left(ActorCallback(self, partitionStatusIterator.next())))
-      }
-      if (!partitionStatusIterator.hasNext) {
-        context.unbecome()
-      }
-    case partitionStatus: PartitionStatus ⇒ commit(partitionStatus)
-  }
-
-  def commit(partitionStatus: PartitionStatus) = {
-    if (topic == partitionStatus.topic) {
-      consumerConnector.commitOffsets(TopicAndPartition(topic, partitionStatus.partition), partitionStatus.offset)
-    }
   }
 }
 
@@ -105,18 +80,16 @@ class KafkaSubscriber(uri: Uri)(implicit plat: UriPlat)
   override protected def requestStrategy: RequestStrategy = WatermarkRequestStrategy(10)
 
   override def receive: Actor.Receive = {
-    case OnNext(element) ⇒
-      element match {
-        case Right(record: ProducerRecord[Array[Byte], Array[Byte]]) ⇒
-          producer.send(record, new Callback {
-            override def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
-              if (exception != null) {
-                log.error(exception.getLocalizedMessage, exception)
-              }
-            }
-          })
-        case Left(ActorCallback(source, state)) ⇒ source ! state
-      }
+    case OnNext(element: TeleporterMessage[ProducerRecord[Array[Byte], Array[Byte]]]) ⇒
+      producer.send(element.data, new Callback {
+        override def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
+          if (exception == null) {
+            log.error(exception.getLocalizedMessage, exception)
+          } else {
+            element.toNext()
+          }
+        }
+      })
   }
 }
 

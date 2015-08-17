@@ -1,12 +1,9 @@
 package kafka;
 
-message KafkaDataList {
-    required int64 sequenceNr = 1;
-    repeated KafkaData kafkaData = 2;
-}
-
 message KafkaData {
+    required bytes id = 1;
     required string topic = 2;
     required bytes key = 3;
-    required bytes message = 4;
+    required int32 partition = 4;
+    required bytes message = 5;
 }
