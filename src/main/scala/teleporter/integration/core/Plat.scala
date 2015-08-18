@@ -127,7 +127,7 @@ class UriPlat extends Plat[Uri] with LazyLogging {
       case host(protocol, name, area) ⇒
         protocol match {
           case "kafka" ⇒ Props(classOf[KafkaSubscriber], description, this)
-          case "adapt" ⇒ Props(classOf[AdapterSubscriber], description)
+          case "bridge" ⇒ Props(classOf[BridgeSubscriber], description)
           case "hikari" ⇒ Props.empty
         }
     }

@@ -13,13 +13,13 @@ public final class KafkaDataOuterClass {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>required bytes id = 1;</code>
+     * <code>required int64 id = 1;</code>
      */
     boolean hasId();
     /**
-     * <code>required bytes id = 1;</code>
+     * <code>required int64 id = 1;</code>
      */
-    com.google.protobuf.ByteString getId();
+    long getId();
 
     /**
      * <code>required string topic = 2;</code>
@@ -114,9 +114,9 @@ public final class KafkaDataOuterClass {
               }
               break;
             }
-            case 10: {
+            case 8: {
               bitField0_ |= 0x00000001;
-              id_ = input.readBytes();
+              id_ = input.readInt64();
               break;
             }
             case 18: {
@@ -181,17 +181,17 @@ public final class KafkaDataOuterClass {
 
     private int bitField0_;
     public static final int ID_FIELD_NUMBER = 1;
-    private com.google.protobuf.ByteString id_;
+    private long id_;
     /**
-     * <code>required bytes id = 1;</code>
+     * <code>required int64 id = 1;</code>
      */
     public boolean hasId() {
       return ((bitField0_ & 0x00000001) == 0x00000001);
     }
     /**
-     * <code>required bytes id = 1;</code>
+     * <code>required int64 id = 1;</code>
      */
-    public com.google.protobuf.ByteString getId() {
+    public long getId() {
       return id_;
     }
 
@@ -283,7 +283,7 @@ public final class KafkaDataOuterClass {
     }
 
     private void initFields() {
-      id_ = com.google.protobuf.ByteString.EMPTY;
+      id_ = 0L;
       topic_ = "";
       key_ = com.google.protobuf.ByteString.EMPTY;
       partition_ = 0;
@@ -323,7 +323,7 @@ public final class KafkaDataOuterClass {
                         throws java.io.IOException {
       getSerializedSize();
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
-        output.writeBytes(1, id_);
+        output.writeInt64(1, id_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         output.writeBytes(2, getTopicBytes());
@@ -348,7 +348,7 @@ public final class KafkaDataOuterClass {
       size = 0;
       if (((bitField0_ & 0x00000001) == 0x00000001)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeBytesSize(1, id_);
+          .computeInt64Size(1, id_);
       }
       if (((bitField0_ & 0x00000002) == 0x00000002)) {
         size += com.google.protobuf.CodedOutputStream
@@ -483,7 +483,7 @@ public final class KafkaDataOuterClass {
 
       public Builder clear() {
         super.clear();
-        id_ = com.google.protobuf.ByteString.EMPTY;
+        id_ = 0L;
         bitField0_ = (bitField0_ & ~0x00000001);
         topic_ = "";
         bitField0_ = (bitField0_ & ~0x00000002);
@@ -621,37 +621,34 @@ public final class KafkaDataOuterClass {
       }
       private int bitField0_;
 
-      private com.google.protobuf.ByteString id_ = com.google.protobuf.ByteString.EMPTY;
+      private long id_ ;
       /**
-       * <code>required bytes id = 1;</code>
+       * <code>required int64 id = 1;</code>
        */
       public boolean hasId() {
         return ((bitField0_ & 0x00000001) == 0x00000001);
       }
       /**
-       * <code>required bytes id = 1;</code>
+       * <code>required int64 id = 1;</code>
        */
-      public com.google.protobuf.ByteString getId() {
+      public long getId() {
         return id_;
       }
       /**
-       * <code>required bytes id = 1;</code>
+       * <code>required int64 id = 1;</code>
        */
-      public Builder setId(com.google.protobuf.ByteString value) {
-        if (value == null) {
-    throw new NullPointerException();
-  }
-  bitField0_ |= 0x00000001;
+      public Builder setId(long value) {
+        bitField0_ |= 0x00000001;
         id_ = value;
         onChanged();
         return this;
       }
       /**
-       * <code>required bytes id = 1;</code>
+       * <code>required int64 id = 1;</code>
        */
       public Builder clearId() {
         bitField0_ = (bitField0_ & ~0x00000001);
-        id_ = getDefaultInstance().getId();
+        id_ = 0L;
         onChanged();
         return this;
       }
@@ -861,7 +858,7 @@ public final class KafkaDataOuterClass {
     java.lang.String[] descriptorData = {
       "\n/src/main/resources/proto/kafka/kafka_d" +
       "ata.proto\022\005kafka\"W\n\tKafkaData\022\n\n\002id\030\001 \002(" +
-      "\014\022\r\n\005topic\030\002 \002(\t\022\013\n\003key\030\003 \002(\014\022\021\n\tpartiti" +
+      "\003\022\r\n\005topic\030\002 \002(\t\022\013\n\003key\030\003 \002(\014\022\021\n\tpartiti" +
       "on\030\004 \002(\005\022\017\n\007message\030\005 \002(\014"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =

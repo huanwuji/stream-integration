@@ -10,14 +10,18 @@ import akka.stream.actor.ActorSubscriberMessage.OnNext
 import akka.stream.actor.{ActorPublisher, ActorSubscriber, RequestStrategy, WatermarkRequestStrategy}
 import com.google.common.util.concurrent.Uninterruptibles
 import com.typesafe.scalalogging.LazyLogging
+import kafka.common.TopicAndPartition
 import kafka.consumer.ConsumerConfig
 import kafka.javaapi.consumer.ZkKafkaConsumerConnector
 import kafka.message.MessageAndMetadata
 import org.apache.kafka.clients.producer._
+import teleporter.integration.component.KafkaComponent.Commit
 import teleporter.integration.core._
 import teleporter.integration.persistence.{TeleId, TeleporterMessage}
 
 import scala.collection.JavaConversions._
+import scala.collection.mutable
+import scala.concurrent.duration._
 
 /**
  * date 2015/8/3.
@@ -61,14 +65,22 @@ class KafkaPublisher(uri: Uri)(implicit plat: UriPlat) extends ActorPublisher[Te
   val it = stream.iterator()
   val persistenceId = "kafkaPublisher".hashCode
   var sequenceNr: Long = 0L
+  val offsets = mutable.HashMap[TopicAndPartition, Long]()
+  context.system.scheduler.schedule(1.minutes, 1.minutes, self, Commit)
 
   override def receive: Receive = {
     case Request(n) ⇒
       log.info(s"$persistenceId: totalDemand:$totalDemand")
       while (totalDemand > 0 && it.hasNext()) {
-        onNext(TeleporterMessage(TeleId(persistenceId, sequenceNr), it.next()))
+        onNext(TeleporterMessage(TeleId(persistenceId, sequenceNr), it.next(), System.currentTimeMillis() + 2 * 60 * 1000))
         sequenceNr += 1
         Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS)
+      }
+    case TeleporterMessage(_, data: MessageAndMetadata[Array[Byte], Array[Byte]], _) ⇒
+      offsets += (TopicAndPartition(data.topic, data.partition) → data.offset)
+    case Commit ⇒
+      offsets.foreach {
+        case (key, value) ⇒ consumerConnector.commitOffsets(key, value)
       }
   }
 }
@@ -83,7 +95,7 @@ class KafkaSubscriber(uri: Uri)(implicit plat: UriPlat)
     case OnNext(element: TeleporterMessage[ProducerRecord[Array[Byte], Array[Byte]]]) ⇒
       producer.send(element.data, new Callback {
         override def onCompletion(metadata: RecordMetadata, exception: Exception): Unit = {
-          if (exception == null) {
+          if (exception != null) {
             log.error(exception.getLocalizedMessage, exception)
           } else {
             element.toNext()
@@ -93,6 +105,8 @@ class KafkaSubscriber(uri: Uri)(implicit plat: UriPlat)
   }
 }
 
-class KafkaComponent {
+object KafkaComponent {
+
+  object Commit
 
 }

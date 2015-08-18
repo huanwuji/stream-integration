@@ -30,8 +30,10 @@ object TeleId {
   }
 }
 
-case class TeleporterMessage[A](id: TeleId, data: A, var next: ActorRef = null) {
+case class TeleporterMessage[A](id: TeleId, data: A, expired: Long, var next: ActorRef = null) {
   def toNext(): Unit = if (next != null) next ! this
+
+  def isExpired: Boolean = System.currentTimeMillis() - expired > 0
 }
 
 object Persistence

@@ -1,7 +1,7 @@
 package kafka;
 
 message KafkaData {
-    required bytes id = 1;
+    required int64 id = 1;
     required string topic = 2;
     required bytes key = 3;
     required int32 partition = 4;
