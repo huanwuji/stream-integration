@@ -13,6 +13,8 @@ case class TeleId(persistenceId: Int, sequenceNr: Long, channelId: Int = 0) {
 }
 
 object TeleId {
+  val emptyTeleId = TeleId(0, 0, 0)
+
   def keyToBytes(key: TeleId): Array[Byte] = {
     val bb = ByteBuffer.allocate(16)
     bb.putInt(key.persistenceId)
@@ -30,7 +32,7 @@ object TeleId {
   }
 }
 
-case class TeleporterMessage[A](id: TeleId, data: A, expired: Long, var next: ActorRef = null) {
+case class TeleporterMessage[A](id: TeleId = TeleId.emptyTeleId, data: A, expired: Long = 0, var next: ActorRef = null, var seqNr: Long = 0L) {
   def toNext(): Unit = if (next != null) next ! this
 
   def isExpired: Boolean = System.currentTimeMillis() - expired > 0

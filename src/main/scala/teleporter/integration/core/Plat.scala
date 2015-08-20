@@ -100,28 +100,30 @@ class UriPlat extends Plat[Uri] with LazyLogging {
     system.actorOf(sink, id)
   }
 
-  private def sourceProps(resourceId: String): Props = {
+  def sourceProps(resourceId: String): Props = {
     val description = uriResources(resourceId)
     sourceProps(description)
   }
 
-  private def sinkProps(resourceId: String): Props = {
+  def sinkProps(resourceId: String): Props = {
     val description = uriResources(resourceId)
     sinkProps(description)
   }
 
-  private def sourceProps(description: Uri): Props = {
+  def sourceProps(description: Uri): Props = {
     logger.info("init source, {}", description)
     description.authority.host.address() match {
       case host(protocol, name, area) ⇒
         protocol match {
           case "kafka" ⇒ Props(classOf[KafkaPublisher], description, this)
+          case "bridge" ⇒ Props(classOf[BridgeProducer], description)
+          case "forward" ⇒ Props(classOf[ForwardProducer])
           case "hikari" ⇒ Props.empty
         }
     }
   }
 
-  private def sinkProps(description: Uri): Props = {
+  def sinkProps(description: Uri): Props = {
     logger.info("init sink, {}", description)
     description.authority.host.address() match {
       case host(protocol, name, area) ⇒

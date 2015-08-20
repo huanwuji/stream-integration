@@ -1,14 +1,12 @@
 package teleporter.integration.component
 
 import java.util.Properties
-import java.util.concurrent.TimeUnit
 
 import akka.actor.{Actor, ActorLogging}
 import akka.http.scaladsl.model.Uri
 import akka.stream.actor.ActorPublisherMessage.Request
 import akka.stream.actor.ActorSubscriberMessage.OnNext
 import akka.stream.actor.{ActorPublisher, ActorSubscriber, RequestStrategy, WatermarkRequestStrategy}
-import com.google.common.util.concurrent.Uninterruptibles
 import com.typesafe.scalalogging.LazyLogging
 import kafka.common.TopicAndPartition
 import kafka.consumer.ConsumerConfig
@@ -66,22 +64,27 @@ class KafkaPublisher(uri: Uri)(implicit plat: UriPlat) extends ActorPublisher[Te
   val persistenceId = "kafkaPublisher".hashCode
   var sequenceNr: Long = 0L
   val offsets = mutable.HashMap[TopicAndPartition, Long]()
+
+  import context.dispatcher
+
   context.system.scheduler.schedule(1.minutes, 1.minutes, self, Commit)
 
   override def receive: Receive = {
     case Request(n) ⇒
       log.info(s"$persistenceId: totalDemand:$totalDemand")
       while (totalDemand > 0 && it.hasNext()) {
-        onNext(TeleporterMessage(TeleId(persistenceId, sequenceNr), it.next(), System.currentTimeMillis() + 2 * 60 * 1000))
+        onNext(TeleporterMessage(TeleId(persistenceId, sequenceNr), it.next(), System.currentTimeMillis() + 1 * 60 * 1000))
         sequenceNr += 1
-        Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS)
       }
-    case TeleporterMessage(_, data: MessageAndMetadata[Array[Byte], Array[Byte]], _) ⇒
+    case TeleporterMessage(_, data: MessageAndMetadata[Array[Byte], Array[Byte]], _, _, _) ⇒
       offsets += (TopicAndPartition(data.topic, data.partition) → data.offset)
     case Commit ⇒
       offsets.foreach {
-        case (key, value) ⇒ consumerConnector.commitOffsets(key, value)
+        case (key, value) ⇒
+          log.info("kafka offset commit:{}, {}", key, value)
+          consumerConnector.commitOffsets(key, value)
       }
+    case x ⇒ log.warning("can't arrived, {}", x)
   }
 }
 
