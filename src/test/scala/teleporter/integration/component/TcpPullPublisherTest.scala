@@ -10,6 +10,6 @@ import org.scalatest.FunSuite
 class TcpPullPublisherTest extends FunSuite {
   test("tcp uri") {
     val uri = Uri("source://tcp.pull.ucloud?poolSize=5&uri=tcp://10.153.192.46:9092")
-    uri
+    println(uri)
   }
 }

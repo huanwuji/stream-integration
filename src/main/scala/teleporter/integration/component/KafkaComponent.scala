@@ -7,7 +7,9 @@ import akka.http.scaladsl.model.Uri
 import akka.stream.actor.ActorPublisherMessage.Request
 import akka.stream.actor.ActorSubscriberMessage.OnNext
 import akka.stream.actor.{ActorPublisher, ActorSubscriber, RequestStrategy, WatermarkRequestStrategy}
+import com.google.protobuf.{ByteString ⇒ GByteString}
 import com.typesafe.scalalogging.LazyLogging
+import kafka.KafkaDataOuterClass.KafkaData
 import kafka.common.TopicAndPartition
 import kafka.consumer.ConsumerConfig
 import kafka.javaapi.consumer.ZkKafkaConsumerConnector
@@ -71,9 +73,8 @@ class KafkaPublisher(uri: Uri)(implicit plat: UriPlat) extends ActorPublisher[Te
 
   override def receive: Receive = {
     case Request(n) ⇒
-      log.info(s"$persistenceId: totalDemand:$totalDemand")
       while (totalDemand > 0 && it.hasNext()) {
-        onNext(TeleporterMessage(TeleId(persistenceId, sequenceNr), it.next(), System.currentTimeMillis() + 1 * 60 * 1000))
+        onNext(TeleporterMessage(id = TeleId(persistenceId, sequenceNr), data = it.next(), expired = System.currentTimeMillis() + 1 * 60 * 1000, next = self))
         sequenceNr += 1
       }
     case TeleporterMessage(_, data: MessageAndMetadata[Array[Byte], Array[Byte]], _, _, _) ⇒
@@ -105,6 +106,19 @@ class KafkaSubscriber(uri: Uri)(implicit plat: UriPlat)
           }
         }
       })
+  }
+}
+
+object KafkaProtoData {
+  def apply(message: TeleporterMessage[MessageAndMetadata[Array[Byte], Array[Byte]]]): KafkaData = {
+    val messageAndMetadata = message.data
+    KafkaData.newBuilder()
+      .setSeqNr(message.seqNr)
+      .setTopic(messageAndMetadata.topic)
+      .setKey(GByteString.copyFrom(messageAndMetadata.key()))
+      .setPartition(messageAndMetadata.partition)
+      .setMessage(GByteString.copyFrom(messageAndMetadata.message()))
+      .build()
   }
 }
 

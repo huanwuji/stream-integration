@@ -31,7 +31,7 @@ class BridgeProducer(uri: Uri) extends ActorPublisher[Message] with ActorLogging
         onNext(cache.dequeue())
       }
       if (subscriber != null && totalDemand > 0) subscriber ! Request(totalDemand)
-    case Subscriber(actorRef) ⇒ subscriber = actorRef; subscriber ! Request(totalDemand); log.info("subscriber was set")
+    case Subscriber(actorRef) ⇒ subscriber = actorRef; subscriber ! Request(totalDemand); log.info("subscriber was register")
     case Heartbeat ⇒ if (subscriber != null && totalDemand > 0) subscriber ! Request(totalDemand)
     case x: Message ⇒ if (totalDemand > 0) onNext(x) else cache.enqueue(x)
     case x ⇒ log.warning("Can't arrived, {}", x)
@@ -83,8 +83,12 @@ class BridgeSubscriber(uri: Uri) extends ActorSubscriber with ActorLogging {
 
   def repairData() = {
     if (repairQueue.isEmpty) {
+      confirmAll()
       ensureMap.foreachValue {
         message ⇒ if (message.isExpired && !confirmIds.contains(message.seqNr)) repairQueue.enqueue(message)
+      }
+      if (repairQueue.nonEmpty) {
+        log.info(s"have repair data size:${repairQueue.size}")
       }
     }
   }
@@ -93,23 +97,27 @@ class BridgeSubscriber(uri: Uri) extends ActorSubscriber with ActorLogging {
     if (ensureMap.contains(id)) {
       confirmIds += id
     }
-    log.info("confirmId:{}, size:{}", id, confirmIds.size)
     if (confirmIds.size % 50 == 0) {
-      var lastSeqNr = confirmIds.firstKey
-      confirmIds.find {
-        currSeqNr ⇒
-          if (currSeqNr - lastSeqNr > 1) {
-            true
-          } else {
-            lastSeqNr = currSeqNr
-            false
-          }
-      }
-      log.info("confirm ids {} to {}", confirmIds.firstKey, lastSeqNr - 1)
-      for (i ← confirmIds.firstKey to lastSeqNr - 1) {
-        ensureMap.remove(i).foreach(_.toNext())
-        confirmIds -= i
-      }
+      confirmAll()
+    }
+  }
+
+  def confirmAll(): Unit = {
+    var lastSeqNr = confirmIds.firstKey
+    confirmIds.find {
+      currSeqNr ⇒
+        if (currSeqNr - lastSeqNr > 1) {
+          true
+        } else {
+          lastSeqNr = currSeqNr
+          false
+        }
+    }
+    log.info(s"confirm ids ${confirmIds.firstKey} to ${lastSeqNr - 1}, " +
+      s"ensure map size:${ensureMap.size}, repairQueue size:${repairQueue.size}, confirmIds size:${confirmIds.size}")
+    for (i ← confirmIds.firstKey to lastSeqNr - 1) {
+      ensureMap.remove(i).foreach(_.toNext())
+      confirmIds -= i
     }
   }
 
@@ -117,7 +125,6 @@ class BridgeSubscriber(uri: Uri) extends ActorSubscriber with ActorLogging {
   final def deliveryBuf(n: Long): Unit = {
     if (cache.nonEmpty && n > 0) {
       val data = cache.dequeue()
-      log.info("seqNr:{}", seqNr)
       ensureMap +=(seqNr, data)
       data.seqNr = seqNr
       seqNr += 1
